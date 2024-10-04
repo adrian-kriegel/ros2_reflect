@@ -12,6 +12,12 @@ find_package(rclcpp REQUIRED)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
 
+ament_export_include_directories(include)
+
+install(DIRECTORY include/
+  DESTINATION include
+)
+
 if(BUILD_TESTING)
   include(test/CMakeLists.txt)
 endif()

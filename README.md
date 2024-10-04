@@ -37,3 +37,27 @@ Make sure you run your node with the following options:
 .allow_undeclared_parameters(true)
 .automatically_declare_parameters_from_overrides(true)
 ```
+
+## Important note about lists 
+
+Lists of structs, reflected as ```std::vector<T>```, require each element to have a unique name. As of right now, elements are ordered alphabetically (which is not ideal). I want to change this in the future, so if your keys are not in alphabetical order, consider the order to be undefined.
+
+Example:
+
+```yaml
+my_structs: 
+  # You can call this anything you like.
+  element0:
+    foo: bar
+  element1:
+    foo: baar
+```
+
+
+## TODO
+
+- Make sure there are no duplicate parameter names.
+
+- Add support for all types supported by rclcpp::ParameterValue
+
+- Automatically declare parameters.

@@ -35,8 +35,8 @@ namespace ros_reflect {
  * };
  *
  */
-template <typename NodeParams>
-void fetch_params(const rclcpp::Node &node, NodeParams &params);
+template <typename NodeParams, typename NodeType>
+void fetch_params(const NodeType &node, NodeParams &params);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -56,7 +56,7 @@ template <typename T, typename Reflector>
 concept IsDeserializable =
     IsPrimitiveNodeParam<T> || HasOwnReflectMethod<T, Reflector>;
 
-class ROSParamFetcher {
+template <typename NodeType> class ROSParamFetcher {
 
 public:
   template <typename T>
@@ -65,7 +65,7 @@ public:
     t.reflect(*this);
   }
 
-  void fetch_params(const rclcpp::Node &node) {
+  void fetch_params(const NodeType &node) {
     // IMPORTANT: Due to the fact that ROS2 cannot parse lists of complex types,
     // properties may be added during calls to fetch_, so we cannot use a
     // range-based loop.
@@ -83,7 +83,7 @@ public:
 
     properties_.emplace_back(
         [&ref, path = std::move(param_name),
-         default_value = std::move(default_value)](const rclcpp::Node &node) {
+         default_value = std::move(default_value)](const NodeType &node) {
           // TODO: call Node::declare_parameter somewhere.
 
           if (node.has_parameter(path)) {
@@ -107,7 +107,7 @@ public:
                               // will become apparent shortly...
                               stack_at_time_of_registration = stack_,
                               // And a ptr to this...
-                              this](const rclcpp::Node &node) mutable {
+                              this](const NodeType &node) mutable {
       std::map<std::string, rclcpp::Parameter> params;
 
       node.get_parameters(prefix, params);
@@ -197,7 +197,7 @@ protected:
 
   class Property {
   public:
-    using Fetcher = std::function<void(const rclcpp::Node &)>;
+    using Fetcher = std::function<void(const NodeType &)>;
     Fetcher fetch_;
 
     Property(Fetcher fetch) : fetch_(std::move(fetch)) {}
@@ -206,9 +206,9 @@ protected:
   std::vector<Property> properties_;
 };
 
-template <typename NodeParams>
-void fetch_params(const rclcpp::Node &node, NodeParams &params) {
-  ROSParamFetcher(params).fetch_params(node);
+template <typename NodeParams, typename NodeType>
+void fetch_params(const NodeType &node, NodeParams &params) {
+  ROSParamFetcher<NodeType>(params).fetch_params(node);
 }
 
 } // namespace ros_reflect

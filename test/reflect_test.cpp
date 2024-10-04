@@ -143,8 +143,7 @@ my_struct:
 
   NestedNodeParams params;
 
-  auto fetcher = ROSParamFetcher(params);
-  fetcher.fetch_params(node);
+  fetch_params(node, params);
 
   // Shallow primitives.
   ASSERT_THAT(params.int_, Eq(42));

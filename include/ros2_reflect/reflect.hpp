@@ -139,8 +139,6 @@ public:
         keys.insert(sub_key);
       }
 
-      ref.reserve(keys.size());
-
       // Add properties on the fly... that's why we need a copy of the stack
       // at the time of the initial call to property() ... :)
 
@@ -151,12 +149,19 @@ public:
       // Swapping is rather cheap and ensures that the suffering caused by the
       // questionable design of ROS parameter parsing doesn't spread into the
       // rest of the property() implementations.
+      // In fact, at this point, stack_ should be empty, so assignment would do.
+      // Feels like something between YAGNI and something that could bite me
+      // later if I didn't do it.
       std::swap(stack_at_time_of_registration, stack_);
       stack_.push(name);
 
-      for (const auto &key : keys) {
-        ref.emplace_back();
-        property(key, ref.back());
+      // Resize instead of clear and reserve to avoid deleting existing
+      // elements.
+      ref.resize(keys.size());
+      uint i = 0;
+
+      for (auto key = keys.begin(); key != keys.end(); ++key, ++i) {
+        property(*key, ref.at(i));
       }
 
       std::swap(stack_at_time_of_registration, stack_);

@@ -161,32 +161,36 @@ my_struct:
 
   NestedNodeParams params;
 
-  fetch_params(node, params);
+  // Fetch twice to make sure there aren't any weird side-effects like growing
+  // vectors.
+  for (uint i = 0; i < 2; ++i) {
+    fetch_params(node, params);
 
-  // Shallow primitives.
-  ASSERT_THAT(params.int_, Eq(42));
-  ASSERT_THAT(params.bool_, Eq(true));
-  ASSERT_THAT(params.double_, Eq(3.14));
-  ASSERT_THAT(params.string_, Eq("hello"));
-  ASSERT_THAT(params.strings_, ElementsAre("one", "two", "three"));
-  ASSERT_THAT(params.ints_, ElementsAre(1, 2, 3));
-  ASSERT_THAT(params.doubles_, ElementsAre(1.0, 2.0, 3.0));
-  ASSERT_THAT(params.bools_, ElementsAre(true, false, true));
+    // Shallow primitives.
+    ASSERT_THAT(params.int_, Eq(42));
+    ASSERT_THAT(params.bool_, Eq(true));
+    ASSERT_THAT(params.double_, Eq(3.14));
+    ASSERT_THAT(params.string_, Eq("hello"));
+    ASSERT_THAT(params.strings_, ElementsAre("one", "two", "three"));
+    ASSERT_THAT(params.ints_, ElementsAre(1, 2, 3));
+    ASSERT_THAT(params.doubles_, ElementsAre(1.0, 2.0, 3.0));
+    ASSERT_THAT(params.bools_, ElementsAre(true, false, true));
 
-  // Complex properties.
+    // Complex properties.
 
-  ASSERT_THAT(params.my_struct_.string_, Eq("Nested hello"));
+    ASSERT_THAT(params.my_struct_.string_, Eq("Nested hello"));
 
-  ASSERT_THAT(params.my_struct_.my_structs_.size(), Eq(2));
+    ASSERT_THAT(params.my_struct_.my_structs_.size(), Eq(2));
 
-  ASSERT_THAT(params.my_struct_.my_structs_.at(0).string_,
-              Eq("Hello from the first element."));
-  ASSERT_THAT(params.my_struct_.my_structs_.at(0).my_structs_.size(), Eq(0));
+    ASSERT_THAT(params.my_struct_.my_structs_.at(0).string_,
+                Eq("Hello from the first element."));
+    ASSERT_THAT(params.my_struct_.my_structs_.at(0).my_structs_.size(), Eq(0));
 
-  ASSERT_THAT(params.my_struct_.my_structs_.at(1).string_,
-              Eq("Hello from the second element."));
-  ASSERT_THAT(params.my_struct_.my_structs_.at(1).my_structs_.size(), Eq(1));
+    ASSERT_THAT(params.my_struct_.my_structs_.at(1).string_,
+                Eq("Hello from the second element."));
+    ASSERT_THAT(params.my_struct_.my_structs_.at(1).my_structs_.size(), Eq(1));
 
-  ASSERT_THAT(params.my_struct_.my_structs_.at(1).my_structs_.at(0).string_,
-              Eq("Hello from the first element of the second element."));
+    ASSERT_THAT(params.my_struct_.my_structs_.at(1).my_structs_.at(0).string_,
+                Eq("Hello from the first element of the second element."));
+  }
 }

@@ -1,4 +1,5 @@
 
+#include <cstdint>
 #include <fstream>
 #include <string>
 
@@ -61,6 +62,9 @@ struct NestedNodeParams {
   double double_;
   std::string string_;
   std::vector<std::string> strings_;
+  std::vector<int64_t> ints_;
+  std::vector<double> doubles_;
+  std::vector<bool> bools_;
 
   //
   //  This is a custom type which requires the reflect mechanism.
@@ -86,6 +90,9 @@ struct NestedNodeParams {
     r.property("double", double_);
     r.property("string", string_);
     r.property("strings", strings_);
+    r.property("ints", ints_);
+    r.property("doubles", doubles_);
+    r.property("bools", bools_);
     r.property("my_struct", my_struct_);
   }
 }; // struct NodeParams
@@ -99,11 +106,20 @@ using namespace ros_reflect_test;
  * I just wanted a place for the static_asserts.
  */
 TEST(ros_reflect, ReflectPrimitivesStatic) {
-  static_assert(IsPrimitiveNodeParam<std::string>);
-  static_assert(IsPrimitiveNodeParam<int>);
-  static_assert(IsPrimitiveNodeParam<double>);
+
+  // From ROS2 doc:
+  // bool, int64, float64, string, byte[], bool[], int64[], float64[] or
+  // string[]
+
   static_assert(IsPrimitiveNodeParam<bool>);
+  static_assert(IsPrimitiveNodeParam<int64_t>);
+  static_assert(IsPrimitiveNodeParam<double>);
+  static_assert(IsPrimitiveNodeParam<std::string>);
+  static_assert(IsPrimitiveNodeParam<std::vector<bool>>);
+  static_assert(IsPrimitiveNodeParam<std::vector<int64_t>>);
+  static_assert(IsPrimitiveNodeParam<std::vector<double>>);
   static_assert(IsPrimitiveNodeParam<std::vector<std::string>>);
+
   static_assert(!IsPrimitiveNodeParam<NestedNodeParams>);
   static_assert(!IsPrimitiveNodeParam<NestedNodeParams::MyStruct>);
 }
@@ -119,6 +135,8 @@ double: 3.14
 string: hello
 strings: [one, two, three]
 ints: [1, 2, 3]
+doubles: [1.0, 2.0, 3.0]
+bools: [true, false, true]
 
 my_struct:
   string: 'Nested hello'
@@ -151,6 +169,9 @@ my_struct:
   ASSERT_THAT(params.double_, Eq(3.14));
   ASSERT_THAT(params.string_, Eq("hello"));
   ASSERT_THAT(params.strings_, ElementsAre("one", "two", "three"));
+  ASSERT_THAT(params.ints_, ElementsAre(1, 2, 3));
+  ASSERT_THAT(params.doubles_, ElementsAre(1.0, 2.0, 3.0));
+  ASSERT_THAT(params.bools_, ElementsAre(true, false, true));
 
   // Complex properties.
 

@@ -60,6 +60,4 @@ my_structs:
 
 - Use only the node's parameter interface.
 
-- Add support for all types supported by rclcpp::ParameterValue
-
 - Automatically declare parameters.

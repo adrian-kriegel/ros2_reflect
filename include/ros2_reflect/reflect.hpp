@@ -43,9 +43,13 @@ void fetch_params(const NodeType &node, NodeParams &params);
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-concept IsPrimitiveNodeParam = requires(const rclcpp::ParameterValue &v, T &t) {
-  { v.get<T>() };
-} || std::is_assignable_v<T, std::vector<std::string>>;
+concept IsPrimitiveNodeParam =
+    requires(const rclcpp::ParameterValue &v, T &t) {
+      { v.get<T>() };
+    } || std::is_assignable_v<T, std::vector<std::string>> ||
+    std::is_assignable_v<T, std::vector<bool>> ||
+    std::is_assignable_v<T, std::vector<int64_t>> ||
+    std::is_assignable_v<T, std::vector<double>>;
 
 template <typename T, typename Reflector>
 concept HasOwnReflectMethod = requires(T t, Reflector r) {

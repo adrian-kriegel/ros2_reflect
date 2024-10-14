@@ -36,7 +36,11 @@ namespace ros_reflect {
  *
  */
 template <typename NodeParams, typename NodeType>
-void fetch_params(const NodeType &node, NodeParams &params);
+void fetch_params(NodeType &node, NodeParams &params);
+
+template <typename NodeParams>
+void fetch_params(rclcpp::node_interfaces::NodeParametersInterface &interface,
+                  NodeParams &params);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -60,21 +64,23 @@ template <typename T, typename Reflector>
 concept IsDeserializable =
     IsPrimitiveNodeParam<T> || HasOwnReflectMethod<T, Reflector>;
 
-template <typename NodeType> class ROSParamFetcher {
+class ROSParamFetcher {
 
 public:
+  using ParametersInterface = rclcpp::node_interfaces::NodeParametersInterface;
+
   template <typename T>
     requires HasOwnReflectMethod<T, ROSParamFetcher>
   ROSParamFetcher(T &t) {
     t.reflect(*this);
   }
 
-  void fetch_params(const NodeType &node) {
+  void fetch_params(const ParametersInterface &interface) {
     // IMPORTANT: Due to the fact that ROS2 cannot parse lists of complex types,
     // properties may be added during calls to fetch_, so we cannot use a
     // range-based loop.
     for (uint i = 0; i < properties_.size(); ++i) {
-      properties_[i].fetch_(node);
+      properties_[i].fetch_(interface);
     }
   }
 
@@ -85,19 +91,19 @@ public:
                 std::optional<T> &&default_value = std::nullopt) {
     std::string param_name = stack_.get_ros_param_name(name);
 
-    properties_.emplace_back(
-        [&ref, path = std::move(param_name),
-         default_value = std::move(default_value)](const NodeType &node) {
-          // TODO: call Node::declare_parameter somewhere.
+    properties_.emplace_back([&ref, path = std::move(param_name),
+                              default_value = std::move(default_value)](
+                                 const ParametersInterface &interface) {
+      // TODO: call Node::declare_parameter somewhere.
 
-          if (node.has_parameter(path)) {
-            node.get_parameter(path, ref);
-          } else if (default_value.has_value()) {
-            ref = std::move(default_value.value());
-          } else {
-            throw std::runtime_error("Parameter not found: " + path);
-          }
-        });
+      if (interface.has_parameter(path)) {
+        get_parameter_wrapper(interface, path, ref);
+      } else if (default_value.has_value()) {
+        ref = std::move(default_value.value());
+      } else {
+        throw std::runtime_error("Parameter not found: " + path);
+      }
+    });
   }
 
   /** Register a vector of primitive or complex properties. */
@@ -111,10 +117,10 @@ public:
                               // will become apparent shortly...
                               stack_at_time_of_registration = stack_,
                               // And a ptr to this...
-                              this](const NodeType &node) mutable {
+                              this](const ParametersInterface &node) mutable {
       std::map<std::string, rclcpp::Parameter> params;
 
-      node.get_parameters(prefix, params);
+      node.get_parameters_by_prefix(prefix, params);
 
       std::set<std::string> keys;
 
@@ -180,6 +186,27 @@ public:
   }
 
 protected:
+  /**
+   * Wrapper to make ParametersInterface::get_parameter behave like
+   * Node::get_parameter...
+   */
+  template <typename ParameterT>
+  static bool get_parameter_wrapper(const ParametersInterface &interface,
+                                    const std::string &name,
+                                    ParameterT &parameter) {
+
+    rclcpp::Parameter parameter_variant;
+
+    bool result = interface.get_parameter(name, parameter_variant);
+    if (result) {
+      parameter =
+          static_cast<ParameterT>(parameter_variant.get_value<ParameterT>());
+    }
+
+    return result;
+  }
+
+protected:
   struct Stack {
     void push(const std::string &name) {
       if (stack_internal_.empty()) {
@@ -206,7 +233,7 @@ protected:
 
   class Property {
   public:
-    using Fetcher = std::function<void(const NodeType &)>;
+    using Fetcher = std::function<void(const ParametersInterface &)>;
     Fetcher fetch_;
 
     Property(Fetcher fetch) : fetch_(std::move(fetch)) {}
@@ -215,9 +242,15 @@ protected:
   std::vector<Property> properties_;
 };
 
+template <typename NodeParams>
+void fetch_params(rclcpp::node_interfaces::NodeParametersInterface &interface,
+                  NodeParams &params) {
+  ROSParamFetcher(params).fetch_params(interface);
+}
+
 template <typename NodeParams, typename NodeType>
-void fetch_params(const NodeType &node, NodeParams &params) {
-  ROSParamFetcher<NodeType>(params).fetch_params(node);
+void fetch_params(NodeType &node, NodeParams &params) {
+  ROSParamFetcher(params).fetch_params(*node.get_node_parameters_interface());
 }
 
 } // namespace ros_reflect

@@ -58,6 +58,4 @@ my_structs:
 
 - Make sure there are no duplicate parameter names.
 
-- Use only the node's parameter interface.
-
 - Automatically declare parameters.

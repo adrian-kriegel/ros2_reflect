@@ -6,7 +6,7 @@ ENABLE_TESTING()
 
 ament_add_gmock(
   ${PROJECT_NAME}_test 
-  test/reflect_test.cpp
+  test/test_reflect.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_test rclcpp)

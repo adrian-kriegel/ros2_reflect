@@ -33,14 +33,18 @@ namespace ros_reflect {
  *      r.property("vec_of_params", vec_of_params_);
  *    }
  * };
+ * @param node Node-Like object to fetch parameters with.
+ * @param params Object to reflect.
+ * @param prefix ROS2 parameter prefix.
  *
  */
 template <typename NodeParams, typename NodeType>
-void fetch_params(NodeType &node, NodeParams &params);
+void fetch_params(NodeType &node, NodeParams &params,
+                  const std::string &prefix = "");
 
 template <typename NodeParams>
 void fetch_params(rclcpp::node_interfaces::NodeParametersInterface &interface,
-                  NodeParams &params);
+                  NodeParams &params, const std::string &prefix = "");
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -69,9 +73,17 @@ class ROSParamFetcher {
 public:
   using ParametersInterface = rclcpp::node_interfaces::NodeParametersInterface;
 
-  template <typename T>
-    requires HasOwnReflectMethod<T, ROSParamFetcher>
-  ROSParamFetcher(T &t) {
+  /**
+   * Construct a ROSParamFetcher for the specified object.
+   * @param t Object to reflect.
+   * @param location Optional start location (ros parameter prefix).
+   */
+  template <typename TParams>
+    requires HasOwnReflectMethod<TParams, ROSParamFetcher>
+  ROSParamFetcher(TParams &t, std::string location = "") {
+    if (!location.empty()) {
+      stack_.push(location);
+    }
     t.reflect(*this);
   }
 
@@ -83,6 +95,12 @@ public:
       properties_[i].fetch_(interface);
     }
   }
+
+  /**
+   * Map @param out_prefix to a string representing the current location the
+   * deserializer is reading parameter from.
+   */
+  void location(std::string &ref) const { ref = stack_.get_ros_param_name(); }
 
   /** Register a primitive property. */
   template <typename T>
@@ -227,12 +245,19 @@ protected:
       }
     }
 
+    [[nodiscard]] std::string get_ros_param_name() const {
+      if (stack_internal_.empty()) {
+        return "";
+      } else {
+        return stack_internal_.back();
+      }
+    }
+
   private:
     std::deque<std::string> stack_internal_;
   } stack_;
 
-  class Property {
-  public:
+  struct Property {
     using Fetcher = std::function<void(const ParametersInterface &)>;
     Fetcher fetch_;
 
@@ -244,13 +269,15 @@ protected:
 
 template <typename NodeParams>
 void fetch_params(rclcpp::node_interfaces::NodeParametersInterface &interface,
-                  NodeParams &params) {
-  ROSParamFetcher(params).fetch_params(interface);
+                  NodeParams &params, const std::string &prefix) {
+  ROSParamFetcher(params, prefix).fetch_params(interface);
 }
 
 template <typename NodeParams, typename NodeType>
-void fetch_params(NodeType &node, NodeParams &params) {
-  ROSParamFetcher(params).fetch_params(*node.get_node_parameters_interface());
+void fetch_params(NodeType &node, NodeParams &params,
+                  const std::string &prefix) {
+  ROSParamFetcher(params, prefix)
+      .fetch_params(*node.get_node_parameters_interface());
 }
 
 } // namespace ros_reflect

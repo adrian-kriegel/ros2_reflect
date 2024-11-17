@@ -124,6 +124,13 @@ public:
     });
   }
 
+  /** Register a primitive property with a default value. */
+  template <typename T>
+    requires IsPrimitiveNodeParam<T>
+  void property(const std::string &name, T &ref, T &&default_value) {
+    property(name, ref, std::optional<T>(std::move(default_value)));
+  }
+
   /** Register a vector of primitive or complex properties. */
   template <typename T>
     requires(IsDeserializable<T, ROSParamFetcher> && !IsPrimitiveNodeParam<T>)
